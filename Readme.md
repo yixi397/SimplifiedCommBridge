@@ -1,4 +1,5 @@
-   // 初始化协议实例
+           
+    //初始化协议实例
     var  commService = new CommunicationService();
     commService.Protocols = new Dictionary<string, ICommunicationProtocol>();
     commService.Protocols.Add("ModbusTCP", new ModbusTcpProtocol());
