@@ -11,7 +11,11 @@
     同时通过模块化设计预留了协议扩展能力，为未来集成 OPC UA、MQTT 等工业物联网协议提供平滑升级路径，
     显著降低工业自动化系统的通讯层开发复杂度。</Description>
     <PackageReadmeFile>Readme.md</PackageReadmeFile>
-    <RepositoryUrl>https://github.com/yixi397/SimplifiedCommBridge</RepositoryUrl>
+    <RepositoryUrl></RepositoryUrl>
+    <PackageProjectUrl>https://github.com/yixi397/SimplifiedCommBridge</PackageProjectUrl>
+    <AssemblyVersion></AssemblyVersion>
+    <FileVersion></FileVersion>
+    <Version>1.0.1</Version><!-- 递增版本号 -->
   </PropertyGroup>
 
   <ItemGroup>
