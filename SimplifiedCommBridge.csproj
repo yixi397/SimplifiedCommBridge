@@ -5,7 +5,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-    <Description>         SimplifiedCommBridge 是一个面向工业通讯场景的高效 .NET 集成库，旨在通过统一的编程接口简化对 Modbus TCP 和 Siemens S7 协议服务器的读写操作。该库封装了多协议差异，提供开箱即用的变量管理、自动轮询和数据同步功能，并支持通过 INotifyPropertyChanged 实现 UI 层实时绑定。开发者只需将业务变量添加到服务集合并启动轮询引擎，即可自动完成数据采集与状态更新，同时通过模块化设计预留了协议扩展能力，为未来集成 OPC UA、MQTT 等工业物联网协议提供平滑升级路径，显著降低工业自动化系统的通讯层开发复杂度。</Description>
+    <Description>SimplifiedCommBridge 是一个面向工业通讯场景的高效 .NET 集成库，旨在通过统一的编程接口简化对 Modbus TCP 和 Siemens S7 协议服务器的读写操作。
+    该库封装了多协议差异，提供开箱即用的变量管理、自动轮询和数据同步功能，并支持通过 INotifyPropertyChanged 
+    实现 UI 层实时绑定。开发者只需将业务变量添加到服务集合并启动轮询引擎，即可自动完成数据采集与状态更新，
+    同时通过模块化设计预留了协议扩展能力，为未来集成 OPC UA、MQTT 等工业物联网协议提供平滑升级路径，
+    显著降低工业自动化系统的通讯层开发复杂度。</Description>
     <PackageReadmeFile>Readme.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/yixi397/SimplifiedCommBridge</RepositoryUrl>
   </PropertyGroup>
