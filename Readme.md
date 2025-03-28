@@ -1,7 +1,7 @@
 # SimplifiedCommBridge
 
-
 工业通信统一接口库 - 快速集成 Modbus TCP/Siemens S7
+
 
 ## 主要功能
 - 同时连接多个设备服务器
@@ -10,7 +10,8 @@
 - 自动轮询数据采集
 - 实时日志监控
 
-##基本使用
+## 基本使用
+```csharp
 // 初始化协议实例
  var  commService = new CommunicationService();
  commService.Protocols = new Dictionary<string, ICommunicationProtocol>();
@@ -49,13 +50,7 @@
  //启动轮询
  commService.StartPolling(100);
 
-##日志监控
-//获取日志信息
-commService.LogEvent += CommService_LogEventHandler;
-void CommService_LogEventHandler(object sender, LogEventArgs logEventArgs)
-{
-    Console.WriteLine(logEventArgs.ToString());
-}
+```
 
 
-
+[![访问Wiki](https://github.com/yixi397/SimplifiedCommBridge/wiki/SimplifiedCommBridge%E6%96%87%E6%A1%A3)]
