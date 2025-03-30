@@ -5,6 +5,8 @@ VisualStudioVersion = 17.11.35327.3
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SimplifiedCommBridge", "SimplifiedCommBridge.csproj", "{67B1E84E-E409-4A62-AB7F-ADE6EB93D90B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimplifiedCommBridgeTest", "..\SimplifiedCommBridgeTest\SimplifiedCommBridgeTest.csproj", "{3D31D261-FE80-4A79-BA66-6553DCA3A105}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{67B1E84E-E409-4A62-AB7F-ADE6EB93D90B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{67B1E84E-E409-4A62-AB7F-ADE6EB93D90B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{67B1E84E-E409-4A62-AB7F-ADE6EB93D90B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3D31D261-FE80-4A79-BA66-6553DCA3A105}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3D31D261-FE80-4A79-BA66-6553DCA3A105}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3D31D261-FE80-4A79-BA66-6553DCA3A105}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3D31D261-FE80-4A79-BA66-6553DCA3A105}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
