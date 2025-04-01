@@ -20,8 +20,12 @@ namespace SimplifiedCommBridge.Models
     {
         Bool,
         Short,
+        UShort,
         Int32,
+        UInt32,
         Float,
+
+
     }
 
 
@@ -30,7 +34,7 @@ namespace SimplifiedCommBridge.Models
     /// </summary>
     public class Variable : INotifyPropertyChanged
     {
-        private static int _nextId = 1; // 静态计数器
+        private static int _nextId = 0; // 静态计数器
         public Variable()
         {
             ID=Interlocked.Increment(ref _nextId);

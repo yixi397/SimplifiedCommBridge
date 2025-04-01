@@ -138,27 +138,27 @@ namespace SimplifiedCommBridge.Service
                     {
                         return getaddress(g.Address);
                     });
-                    List<Tuple<int, int, int>> readStrategy;
-                   
                     switch (group.ToList()[0].DataType)
                     {
                             case VarTypeEnum.Bool:
-                                readStrategy = GenerateReadStrategy(group.ToList(), 2000);//获取读取策略
-                                read<bool>(readStrategy, group, _modbusTcpHelper.ReadCoils);//执行读取
-                                break;
+                                readBIT(group);//执行读取
+                            break;
                             case VarTypeEnum.Short:
-                                
-                                readStrategy = GenerateReadStrategy(group.ToList(), 120);//获取读取策略
-                                read<short>(readStrategy, group, _modbusTcpHelper.ReadShorts);//执行读取
-                                break;
-                            case VarTypeEnum.Int32:
-                                readStrategy = GenerateReadStrategy(group.ToList(), 60);//获取读取策略
-                                read<Int32>(readStrategy, group, _modbusTcpHelper.ReadInt32s);//执行读取
+                                readRegister<short>(group);//执行读取
+                            break;
+                            case VarTypeEnum.UShort:
+                                readRegister<ushort>(group);//执行读取
                             break;
 
-                            case VarTypeEnum.Float:
-                                readStrategy = GenerateReadStrategy(group.ToList(), 60);//获取读取策略
-                                read<float>(readStrategy, group, _modbusTcpHelper.ReadFloats);//执行读取
+                            case VarTypeEnum.Int32:
+                                readRegister<Int32>(group);//执行读取
+                            break;
+
+                            case VarTypeEnum.UInt32:
+                                readRegister<uint>(group);//执行读取
+                            break;
+                        case VarTypeEnum.Float:
+                                readRegister<float>(group);//执行读取
                             break;
                             
                     }
@@ -180,50 +180,117 @@ namespace SimplifiedCommBridge.Service
             }
            
         }
-       /// <summary>
-       /// 
-       /// </summary>
-       /// <typeparam name="T">读取的数据类型</typeparam>
-       /// <param name="readStrategy">读取策略 </param>
-       /// <param name="group">读取集合</param>
-       /// <param name="readFunc">读取方法</param>
-       private void read<T>(List<Tuple<int, int, int>> readStrategy,IGrouping<VarTypeEnum,Variable> group, Func<ushort, ushort, byte, T[]> readFunc)
+ 
+
+        /// <summary>
+        /// 读取寄存器数据
+        /// </summary>
+        /// <typeparam name="T">数据类型</typeparam>
+        /// <param name="group"></param>
+        private void readRegister<T>(IGrouping<VarTypeEnum, Variable> group)
         {
-            Dictionary<ushort, T> keys = new Dictionary<ushort, T>();//地址和值字典
-            for (int i = 0; i < readStrategy.Count; i++)//读取变量并保存到字典里
+            //获取地址数据
+            ushort[] ushorts = new ushort[group.ToList< Variable >(). Count];
+            for (ushort i = 0; i < ushorts.Length; i++)
             {
-                T[] values = readFunc((ushort)readStrategy[i].Item1, (ushort)readStrategy[i].Item2,1);
+                ushorts[i] = getaddress(group.ToList<Variable>()[i].Address);
+            }
+            var ReadStrategy = GenerateReadStrategy(ushorts, 120);
+            //获取原始数据
+            Dictionary<ushort, ushort> keys = new Dictionary<ushort, ushort>();//地址和值字典
+            for (ushort i = 0;i < ReadStrategy.Count; i++)
+            {
+                ushort[] values = _modbusTcpHelper.ReadHoldingRegisters(ReadStrategy[i].Item1,(ushort)(ReadStrategy[i].Item2+1));
 
-                for (int j = 0; j < values.Length; j++)
+                for (ushort j = 0;j<values.Length;j++)
                 {
-                    keys.Add((ushort)(readStrategy[i].Item1 + j), values[j]);
+                    //将地址和值添加到字典
+                    ushort address = (ushort)(ReadStrategy[i].Item1 + j);
+                    if (keys.ContainsKey(address) == false)
+                    {
+                        keys.Add(address, values[j]);
+                    }
                 }
+            }
+            
+            //解析数据
+            foreach (var item in group)
+            {
+                ushort u1 = keys[getaddress(item.Address)];
+                ushort u2 = keys[(ushort)(getaddress(item.Address) + 1)];
+                switch (item.DataType)
+                {
+                    case VarTypeEnum.Short:
+                        item.Value = (short)u1;
+                        break;
+                    case VarTypeEnum.UShort:
+                        item.Value = (ushort)u1;
+                        break;
+                    case VarTypeEnum.Int32:
+                        item.Value = (Int32)Convert16bitTo32bit(u2, u1);
+                        break;
+                    case VarTypeEnum.UInt32:
+                        item.Value = (UInt32)Convert16bitTo32bit(u2, u1);
+                        break;
+                    case VarTypeEnum.Float:
+                        item.Value = (float)Convert16bitTo32bit(u2, u1);
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+        /// <summary>
+        /// 16位数据转换位32位数据
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="value1"></param>
+        /// <param name="value2"></param>
+        /// <returns></returns>
+        private UInt32 Convert16bitTo32bit(ushort value1,ushort value2)
+        {
+            UInt32 result = (UInt32)((value1 << 16) | value2);
+            return result;
+        }
 
+
+        /// <summary>
+        /// 读取寄存器数据
+        /// </summary>
+        /// <typeparam name="T">数据类型</typeparam>
+        /// <param name="group"></param>
+        private void readBIT(IGrouping<VarTypeEnum, Variable> group)
+        {
+            //获取地址数据
+            ushort[] ushorts = new ushort[group.ToList<Variable>().Count];
+            for (ushort i = 0; i < ushorts.Length; i++)
+            {
+                ushorts[i] = getaddress(group.ToList<Variable>()[i].Address);
+            }
+            var ReadStrategy = GenerateReadStrategy(ushorts, 2000);
+            //获取原始数据
+            Dictionary<ushort, bool> keys = new Dictionary<ushort, bool>();//地址和值字典
+            for (ushort i = 0; i < ReadStrategy.Count; i++)
+            {
+                bool[] values = _modbusTcpHelper.ReadCoils(ReadStrategy[i].Item1, (ushort)(ReadStrategy[i].Item2 + 1));
+
+                for (ushort j = 0; j < values.Length; j++)
+                {
+                    //将地址和值添加到字典
+                    ushort address = (ushort)(ReadStrategy[i].Item1 + j);
+                    if (keys.ContainsKey(address) == false)
+                    {
+                        keys.Add(address, values[j]);
+                    }
+                }
             }
 
+            //解析数据
             foreach (var item in group)
             {
                 item.Value = keys[getaddress(item.Address)];
             }
-
-            //Dictionary<int,int> keys = new Dictionary<int,int>();
-            //for (int i = 0; i < readStrategy.Count; i++)
-            //{
-            //    short[] values = _modbusTcpHelper.ReadShorts((ushort)readStrategy[i].Item1, (ushort)readStrategy[i].Item2);
-
-            //    for (int j = 0; j < values.Length; j++)
-            //    {
-            //        keys.Add(readStrategy[i].Item1+j, values[j]);
-            //    }
-
-            //}
-
-            //foreach (var item in group)
-            //{
-            //    item.Value = keys[int.Parse(item.Address)];
-            //}
         }
-
 
 
         #region 写入接口实现
@@ -269,8 +336,14 @@ namespace SimplifiedCommBridge.Service
                         case VarTypeEnum.Short:
                             wirte<short>(group.Variables, _modbusTcpHelper.WriteShorts, 120);
                             break;
+                        case VarTypeEnum.UShort:
+                            wirte<ushort>(group.Variables, _modbusTcpHelper.WriteHoldingRegisters, 120);
+                            break;
                         case VarTypeEnum.Int32:
                             wirte<int>(group.Variables, _modbusTcpHelper.WriteInt32s, 60);
+                            break;
+                        case VarTypeEnum.UInt32:
+                            wirte<uint>(group.Variables, _modbusTcpHelper.WriteUInt32s, 60);
                             break;
                         case VarTypeEnum.Float:
                             wirte<float>(group.Variables, _modbusTcpHelper.WriteFloats, 60);
@@ -357,11 +430,15 @@ namespace SimplifiedCommBridge.Service
                     case VarTypeEnum.Short:
                         _modbusTcpHelper.WriteSingleShort(getaddress(variable.Address), (short)variable.SetValue);
                         break;
-
+                    case VarTypeEnum.UShort:
+                        _modbusTcpHelper.WriteSingleRegister(getaddress(variable.Address), (ushort)variable.SetValue);
+                        break;
                     case VarTypeEnum.Int32:
                         _modbusTcpHelper.WriteInt32(getaddress(variable.Address), (Int32)variable.SetValue);
                         break;
-
+                    case VarTypeEnum.UInt32:
+                        _modbusTcpHelper.WriteUInt32(getaddress(variable.Address), (UInt32)variable.SetValue);
+                        break;
                     case VarTypeEnum.Float:
                         _modbusTcpHelper.WriteFloat(getaddress(variable.Address), (float)variable.SetValue);
                         break;
@@ -379,65 +456,58 @@ namespace SimplifiedCommBridge.Service
 
         #endregion
 
-        #region 批量读写策略方法
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="variables"></param>
-        /// <param name="maxQuantity"></param>
-        /// <returns>地址 数量 变量个数</returns>
-        public List<Tuple<int, int, int>> GenerateReadStrategy(List<Variable> variables, int maxQuantity)
-        {
-            int[] ints = new int[variables.Count];
-            for (int i = 0; i < variables.Count; i++)
-            {
-                ints[i] = getaddress(variables[i].Address);
-            }
-            return GenerateReadStrategy(ints, maxQuantity);
-        }
+   
 
-        // 生成读取策略的方法
-        public List<Tuple<int, int, int>> GenerateReadStrategy(int[] addresses, int maxReadCount)
+    
+        /// <summary>
+        /// 获取读取策略方法
+        /// </summary>
+        /// <param name="addresses">地址数据</param>
+        /// <param name="maxQuantity">最大读取数量</param>
+        /// <returns></returns>
+        public List<Tuple<ushort, ushort>> GenerateReadStrategy(ushort[] addresses, ushort maxQuantity)
         {
             if (addresses == null || addresses.Length == 0)
-                return new List<Tuple<int, int, int>>();
+                return new List<Tuple<ushort, ushort>>();
 
-            // 去重并排序地址
-            int[] sortedAddresses = addresses.Distinct().OrderBy(a => a).ToArray();
-            List<Tuple<int, int, int>> readBlocks = new List<Tuple<int, int, int>>();
-            int readStartAddress = sortedAddresses[0];
-            int readEndAddress = sortedAddresses[0] + maxReadCount;
-            int index = 0;
-            for (int i = 0; i < sortedAddresses.Length; i++)
+            // 排序并去重
+            Array.Sort(addresses);
+            var distinctAddresses = addresses.Distinct().ToArray();
+
+            var strategy = new List<Tuple<ushort, ushort>>();
+            int currentIndex = 0;
+            int n = distinctAddresses.Length;
+
+            while (currentIndex < n)
             {
-                if (sortedAddresses[i] <= readEndAddress)
-                {
-                    index++;
+                ushort currentStart = distinctAddresses[currentIndex];
+                ushort maxEnd = (ushort)(currentStart + maxQuantity - 1);
 
-                }
-                else
-                {
-                    readBlocks.Add(Tuple.Create(readStartAddress, sortedAddresses[i - 1] - readStartAddress + 1, index));
+                // 处理ushort溢出情况
+                if (maxEnd < currentStart)
+                    maxEnd = ushort.MaxValue;
 
-                    index = 0;
-                    readStartAddress = sortedAddresses[i];
-                    readEndAddress = sortedAddresses[i] + maxReadCount;
-                }
+                int lastInRange = currentIndex;
+                while (lastInRange < n && distinctAddresses[lastInRange] <= maxEnd)
+                    lastInRange++;
 
+                lastInRange--;
+
+                ushort end = distinctAddresses[lastInRange];
+                int quantity = end - currentStart + 1;
+
+                strategy.Add(Tuple.Create((ushort)currentStart, (ushort)quantity));
+
+                currentIndex = lastInRange + 1;
             }
-            readBlocks.Add(Tuple.Create(readStartAddress, sortedAddresses[sortedAddresses.Length - 1] - readStartAddress + 1, index));
 
-
-
-            return readBlocks;
+            return strategy;
         }
 
-        
 
 
 
-
-        #endregion
+       
 
     }
 }

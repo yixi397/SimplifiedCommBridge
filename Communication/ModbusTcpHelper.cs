@@ -114,6 +114,34 @@ namespace SimplifiedCommBridge.Communication
 
         }
 
+        // 写入32无符号整数
+        public void WriteUInt32(ushort address, uint value, byte slaveId = 1)
+        {
+
+            var lowWord = (ushort)(value & 0xFFFF);
+            var highWord = (ushort)((value >> 16) & 0xFFFF);
+            _master.WriteMultipleRegisters(slaveId, address, new ushort[] { lowWord, highWord });
+
+        }
+
+
+        // 批量写入32无符号整数
+        public void WriteUInt32s(ushort startAddress, uint[] values, byte slaveId = 1)
+        {
+
+
+            ushort[] registers = new ushort[values.Length * 2];
+
+            for (int i = 0; i < values.Length; i++)
+            {
+                registers[i * 2] = (ushort)(values[i] & 0xFFFF);
+                registers[i * 2 + 1] = (ushort)((values[i] >> 16) & 0xFFFF);
+            }
+            _master.WriteMultipleRegisters(slaveId, startAddress, registers);
+
+
+        }
+
         // 读取浮点数
         public float ReadFloat(ushort address, byte slaveId = 1)
         {
@@ -158,7 +186,22 @@ namespace SimplifiedCommBridge.Communication
             return _master.ReadHoldingRegisters(slaveId, startAddress, numberOfPoints);
         }
 
-       
+        // 批量读取32位寄存器
+        public UInt32[] ReadUInt32s(ushort startAddress, ushort numberOfPoints, byte slaveId = 1)
+        {
+
+            ushort[] registers = _master.ReadHoldingRegisters(slaveId, startAddress, (ushort)(numberOfPoints * 2));
+            UInt32[] values = new UInt32[numberOfPoints];
+
+            for (int i = 0; i < numberOfPoints; i++)
+            {
+                values[i] = (uint)((registers[i * 2 + 1] << 16) | registers[i * 2]);
+            }
+
+            return values;
+        }
+
+
         // 批量写入保持寄存器
         public void WriteHoldingRegisters(ushort startAddress, ushort[] values, byte slaveId = 1)
         {
