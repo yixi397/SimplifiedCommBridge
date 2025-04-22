@@ -39,5 +39,3 @@
 
 ```
 
-
-[![∑√Œ Wiki](https://github.com/yixi397/SimplifiedCommBridge/wiki/SimplifiedCommBridge%E6%96%87%E6%A1%A3)]
