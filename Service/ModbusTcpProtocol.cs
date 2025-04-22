@@ -1,5 +1,6 @@
 ﻿using SimplifiedCommBridge.Communication;
 using SimplifiedCommBridge.Models;
+using System.Diagnostics;
 
 
 namespace SimplifiedCommBridge.Service
@@ -89,15 +90,19 @@ namespace SimplifiedCommBridge.Service
             LogEvent?.Invoke(this, new LogEventArgs($"断开连接Modbus设备{_modbusTcpHelper.IpAddress}-{_modbusTcpHelper.Port} "));
             _modbusTcpHelper.Disconnect();
         }
-       
-       
 
+
+        #region 读取
         /// <summary>
         /// 批量读取变量值
         /// </summary>
         public void ReadVariables(IEnumerable<Variable> variables)
         {
-            
+            // 创建Stopwatch实例
+            Stopwatch stopwatch = new Stopwatch();
+            // 开始计时
+            stopwatch.Start();
+
             try
             {
                 if (!IsConnected)
@@ -165,7 +170,21 @@ namespace SimplifiedCommBridge.Service
                     throw new Exception($"Modbus读取错误: {ex.Message}");
                 }
             }
-           
+
+
+
+            // 停止计时
+            stopwatch.Stop();
+            // 获取运行时间
+            TimeSpan elapsedTime = stopwatch.Elapsed;
+            // 输出运行时间
+            if(variables.ToList().Count>0)
+            {
+                LogEvent?.Invoke(this, new LogEventArgs($"{variables.ToList()[0].ProtocolName}轮询一次完成，耗时-{elapsedTime.TotalMilliseconds}毫秒",
+                LogEventArgs.LogLevelEnum.Debug));
+            }
+            
+
         }
  
 
@@ -279,173 +298,6 @@ namespace SimplifiedCommBridge.Service
             }
         }
 
-
-        #region 写入接口实现
-        /// <summary>
-        /// 批量写入
-        /// </summary>
-        /// <param name="variables"></param>
-        public void WriteVariable(List<Variable> variables)
-        {
-            // 输入参数校验
-            if (variables == null || variables.Count == 0)
-            {
-                LogEvent?.Invoke(this, new LogEventArgs("变量列表为空，无需写入"));
-                
-                return;
-            }
-
-            if (!IsConnected)
-            {
-                LogEvent?.Invoke(this, new LogEventArgs("设备未连接，无法写入。"));
-                return;
-            }
-
-            try
-            {
-                // 提前分组并排序，避免重复计算
-                var sortedGroups = variables
-                    .GroupBy(v => v.DataType)
-                    .Select(g => new
-                    {
-                        DataType = g.Key,
-                        Variables = g.OrderBy(v => getaddress(v.Address)).ToList()
-                    })
-                    .ToList();
-
-                foreach (var group in sortedGroups)
-                {
-                    switch (group.DataType)
-                    {
-                        case VarTypeEnum.Bool:
-                            wirte<bool>(group.Variables, _modbusTcpHelper.WriteCoils, 2000);
-                            break;
-                        case VarTypeEnum.Short:
-                            wirte<short>(group.Variables, _modbusTcpHelper.WriteShorts, 120);
-                            break;
-                        case VarTypeEnum.UShort:
-                            wirte<ushort>(group.Variables, _modbusTcpHelper.WriteHoldingRegisters, 120);
-                            break;
-                        case VarTypeEnum.Int32:
-                            wirte<int>(group.Variables, _modbusTcpHelper.WriteInt32s, 60);
-                            break;
-                        case VarTypeEnum.UInt32:
-                            wirte<uint>(group.Variables, _modbusTcpHelper.WriteUInt32s, 60);
-                            break;
-                        case VarTypeEnum.Float:
-                            wirte<float>(group.Variables, _modbusTcpHelper.WriteFloats, 60);
-                            break;
-                        default:
-                            LogEvent?.Invoke(this,  new LogEventArgs($"不支持的数据类型: {group.DataType}",LogEventArgs.LogLevelEnum.Error));
-                            throw new Exception($"不支持的数据类型: {group.DataType}");
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                LogEvent?.Invoke(this, new LogEventArgs($"写入过程中发生错误: {ex.Message}", LogEventArgs.LogLevelEnum.Error));
-            }
-        }
-
-        private void wirte<T>(List<Variable> list, Action<ushort, T[], byte> writeFunc, int number)
-        {
-            for (int i = 0; i < list.Count; i++)
-            {
-                List<Variable> values = new List<Variable>();
-                ushort address;
-
-                try
-                {
-                    // 获取首地址
-                    address = getaddress(list[i].Address);
-                    values.Add(list[i]);
-
-                    int index = 0;
-                    // 计算下一个地址是否连续
-                    while (i < list.Count - 1 && getaddress(list[i + 1].Address) == address + (ushort)(values.Count) && index < number)
-                    {
-                        values.Add(list[i + 1]);
-                        i++;
-                        index++;
-                    }
-                    T[]  values1 =new T[values.Count];
-                    for (int j = 0; j < values.Count; j++)
-                    {
-                        // 动态处理所有数值类型（int, short, long 等）
-                        dynamic value = values[j].SetValue;
-                        values1[j] = (T)value; // 利用 dynamic 运行时解析类型
-                    }
-
-                    // 调用写入函数
-                    LogEvent?.Invoke(this, new LogEventArgs($"执行写入-地址:{address} 数量:{values1.Length}"));
-                    writeFunc(address, values1, 1);
-
-                    // 输出日志
-                    for (int j = 0; j < values.Count; j++)
-                    {
-
-                        LogEvent?.Invoke(this, new LogEventArgs($"写入地址:{address + j} 写入值:{values[j].SetValue}"));
-                    }
-                }
-                catch (Exception ex)
-                {
-                    LogEvent?.Invoke(this, new LogEventArgs($"写入时发生错误: {ex.Message}", LogEventArgs.LogLevelEnum.Error));
-                    throw new Exception($"写入时发生错误: {ex.Message}");
-                }
-            }
-        }
-
-
-        /// <summary>
-        /// 单个写入
-        /// </summary>
-        /// <param name="variable"></param>
-        public void WriteVariable(Variable variable)
-        {
-            if(IsConnected==false)
-            {
-                LogEvent?.Invoke(this, new LogEventArgs($"设备未连接，无法写入", LogEventArgs.LogLevelEnum.Error));
-                return;
-            }
-            try
-            {
-                switch (variable.DataType)
-                {
-                    case VarTypeEnum.Bool:
-                        _modbusTcpHelper.WriteSingleCoil(getaddress(variable.Address), (bool)variable.SetValue);
-                        break;
-                    case VarTypeEnum.Short:
-                        _modbusTcpHelper.WriteSingleShort(getaddress(variable.Address), (short)variable.SetValue);
-                        break;
-                    case VarTypeEnum.UShort:
-                        _modbusTcpHelper.WriteSingleRegister(getaddress(variable.Address), (ushort)variable.SetValue);
-                        break;
-                    case VarTypeEnum.Int32:
-                        _modbusTcpHelper.WriteInt32(getaddress(variable.Address), (Int32)variable.SetValue);
-                        break;
-                    case VarTypeEnum.UInt32:
-                        _modbusTcpHelper.WriteUInt32(getaddress(variable.Address), (UInt32)variable.SetValue);
-                        break;
-                    case VarTypeEnum.Float:
-                        _modbusTcpHelper.WriteFloat(getaddress(variable.Address), (float)variable.SetValue);
-                        break;
-                    default:
-                        throw new Exception($"不支持的数据类型: {variable.DataType}");
-                }
-            }
-            catch (Exception ex)
-            {
-
-                LogEvent?.Invoke(this, new LogEventArgs($"写入过程中发生错误: {ex.Message}", LogEventArgs.LogLevelEnum.Error));
-            }
-           
-        }
-
-        #endregion
-
-   
-
-    
         /// <summary>
         /// 获取读取策略方法
         /// </summary>
@@ -491,10 +343,200 @@ namespace SimplifiedCommBridge.Service
             return strategy;
         }
 
+        #endregion
+
+        #region 写入接口实现
+        /// <summary>
+        /// 批量写入
+        /// </summary>
+        /// <param name="variables"></param>
+        public void WriteVariable(List<Variable> variables)
+        {
+            // 输入参数校验
+            if (variables == null || variables.Count == 0)
+            {
+                LogEvent?.Invoke(this, new LogEventArgs("变量列表为空，无需写入"));
+                
+                return;
+            }
+
+            if (!IsConnected)
+            {
+                LogEvent?.Invoke(this, new LogEventArgs("设备未连接，无法写入。"));
+                return;
+            }
+
+            try
+            {
+                // 提前分组并排序，避免重复计算
+                var sortedGroups = variables
+                    .GroupBy(v => v.DataType)
+                    .Select(g => new
+                    {
+                        DataType = g.Key,
+                        Variables = g.OrderBy(v => getaddress(v.Address)).ToList()
+                    })
+                    .ToList();
+
+                foreach (var group in sortedGroups)
+                {
+                    switch (group.DataType)
+                    {
+                        case VarTypeEnum.Bool:
+                            Write<bool>(group.Variables, _modbusTcpHelper.WriteCoils, 2000);
+                            break;
+                        case VarTypeEnum.Short:
+                            Write<short>(group.Variables, _modbusTcpHelper.WriteShorts, 120);
+                            break;
+                        case VarTypeEnum.UShort:
+                            Write<ushort>(group.Variables, _modbusTcpHelper.WriteHoldingRegisters, 120);
+                            break;
+                        case VarTypeEnum.Int32:
+                            Write<int>(group.Variables, _modbusTcpHelper.WriteInt32s, 60,2);
+                            break;
+                        case VarTypeEnum.UInt32:
+                            Write<uint>(group.Variables, _modbusTcpHelper.WriteUInt32s, 60, 2);
+                            break;
+                        case VarTypeEnum.Float:
+                            Write<float>(group.Variables, _modbusTcpHelper.WriteFloats, 60, 2);
+                            break;
+                        default:
+                            LogEvent?.Invoke(this,  new LogEventArgs($"不支持的数据类型: {group.DataType}",LogEventArgs.LogLevelEnum.Error));
+                            throw new Exception($"不支持的数据类型: {group.DataType}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LogEvent?.Invoke(this, new LogEventArgs($"写入过程中发生错误: {ex.Message}", LogEventArgs.LogLevelEnum.Error));
+            }
+        }
+
+        private void Write<T>(List<Variable> list,Action<ushort, T[], byte> writeFunc,
+            int WriteMaxNumber,
+            ushort addressSpan = 1 // 直接传入固定地址跨度，默认1个地址单位
+)
+        {
+            // 创建Stopwatch实例
+            Stopwatch stopwatch = new Stopwatch();
+            // 开始计时
+            stopwatch.Start();
+
+            for (int i = 0; i < list.Count; i++)
+            {
+                List<Variable> values = new List<Variable>();
+                ushort address;
+
+                try
+                {
+                    // 获取首地址
+                    address = getaddress(list[i].Address);
+                    values.Add(list[i]);
+
+                    // 计算下一个地址是否连续（基于固定地址跨度）
+                    while (i < list.Count - 1
+                           && getaddress(list[i + 1].Address) == address + (ushort)(values.Count * addressSpan)
+                           && values.Count < WriteMaxNumber)
+                    {
+                        values.Add(list[i + 1]);
+                        i++;
+                    }
+
+                    // 类型转换和写入逻辑保持不变
+                    T[] values1 = new T[values.Count];
+                    for (int j = 0; j < values.Count; j++)
+                    {
+                        dynamic value = values[j].SetValue;
+                        values1[j] = (T)value;
+                    }
+
+                    LogEvent?.Invoke(this, new LogEventArgs($"执行批量写入-地址:{address} 数量:{values1.Length}"));
+                    writeFunc(address, values1, 1);
+
+                    // 日志按实际跨度递增
+                    for (int j = 0; j < values.Count; j++)
+                    {
+                        ushort currentAddress = (ushort)(address + j * addressSpan);
+                        LogEvent?.Invoke(this, new LogEventArgs($"写入地址:{currentAddress} 写入值:{values[j].SetValue}"));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LogEvent?.Invoke(this, new LogEventArgs($"写入时发生错误: {ex.Message}", LogEventArgs.LogLevelEnum.Error));
+                    throw new Exception($"写入时发生错误: {ex.Message}", ex);
+                }
+            }
+
+            // 停止计时
+            stopwatch.Stop();
+            // 获取运行时间
+            TimeSpan elapsedTime = stopwatch.Elapsed;
+            // 输出运行时间
+            LogEvent?.Invoke(this, new LogEventArgs($"执行批量写入完成，耗时-{elapsedTime.TotalMilliseconds}毫秒", 
+                LogEventArgs.LogLevelEnum.Debug));
+            
+        }
 
 
+        /// <summary>
+        /// 单个写入
+        /// </summary>
+        /// <param name="variable"></param>
+        public void WriteVariable(Variable variable)
+        {
+            // 创建Stopwatch实例
+            Stopwatch stopwatch = new Stopwatch();
+            // 开始计时
+            stopwatch.Start();
 
-       
+            if (IsConnected==false)
+            {
+                LogEvent?.Invoke(this, new LogEventArgs($"设备未连接，无法写入", LogEventArgs.LogLevelEnum.Error));
+                return;
+            }
+            try
+            {
+                switch (variable.DataType)
+                {
+                    case VarTypeEnum.Bool:
+                        _modbusTcpHelper.WriteSingleCoil(getaddress(variable.Address), (bool)variable.SetValue);
+                        break;
+                    case VarTypeEnum.Short:
+                        _modbusTcpHelper.WriteSingleShort(getaddress(variable.Address), (short)variable.SetValue);
+                        break;
+                    case VarTypeEnum.UShort:
+                        _modbusTcpHelper.WriteSingleRegister(getaddress(variable.Address), (ushort)variable.SetValue);
+                        break;
+                    case VarTypeEnum.Int32:
+                        _modbusTcpHelper.WriteInt32(getaddress(variable.Address), (Int32)variable.SetValue);
+                        break;
+                    case VarTypeEnum.UInt32:
+                        _modbusTcpHelper.WriteUInt32(getaddress(variable.Address), (UInt32)variable.SetValue);
+                        break;
+                    case VarTypeEnum.Float:
+                        _modbusTcpHelper.WriteFloat(getaddress(variable.Address), (float)variable.SetValue);
+                        break;
+                    default:
+                        throw new Exception($"不支持的数据类型: {variable.DataType}");
+                }
+            }
+            catch (Exception ex)
+            {
+
+                LogEvent?.Invoke(this, new LogEventArgs($"写入过程中发生错误: {ex.Message}", LogEventArgs.LogLevelEnum.Error));
+            }
+
+            // 停止计时
+            stopwatch.Stop();
+            // 获取运行时间
+            TimeSpan elapsedTime = stopwatch.Elapsed;
+            // 输出运行时间
+            LogEvent?.Invoke(this, new LogEventArgs($"执行写入1个数据完成，耗时-{elapsedTime.TotalMilliseconds}毫秒",
+                LogEventArgs.LogLevelEnum.Debug));
+        }
+
+        #endregion
+
 
     }
 }

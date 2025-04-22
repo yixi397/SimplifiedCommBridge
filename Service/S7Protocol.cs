@@ -12,6 +12,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 using SimplifiedCommBridge.Service;
+using System.Diagnostics;
 
 
 namespace SimplifiedCommBridge.Service
@@ -74,7 +75,11 @@ namespace SimplifiedCommBridge.Service
         /// </summary>
         public void ReadVariables(IEnumerable<Variable> variables)
         {
-           
+            // 创建Stopwatch实例
+            Stopwatch stopwatch = new Stopwatch();
+            // 开始计时
+            stopwatch.Start();
+
             try
             {
                 //判断是否连接
@@ -160,24 +165,39 @@ namespace SimplifiedCommBridge.Service
                     throw new Exception($"S7读取错误: {ex.Message}");
                 }
             }
-            
+
+            // 停止计时
+            stopwatch.Stop();
+            // 获取运行时间
+            TimeSpan elapsedTime = stopwatch.Elapsed;
+            // 输出运行时间
+            if (variables.ToList().Count > 0)
+            {
+                LogEvent?.Invoke(this, new LogEventArgs($"{variables.ToList()[0].ProtocolName}轮询一次完成，耗时-{elapsedTime.TotalMilliseconds}毫秒",
+                LogEventArgs.LogLevelEnum.Debug));
+            }
+
         }
 
        
 
         public void WriteVariable(Variable variable)
         {
+            // 创建Stopwatch实例
+            Stopwatch stopwatch = new Stopwatch();
+            // 开始计时
+            stopwatch.Start();
+
             //判断是否连接
             if (!IsConnected)
             {
                 LogEvent?.Invoke(this, new LogEventArgs($"{variable.ToString()} 写入失败 设备未连接", LogEventArgs.LogLevelEnum.Error));
-               
             }
 
             if (variable.SetValue==null)
             {
                 LogEvent?.Invoke(this, new LogEventArgs($"WriteVariable{variable.ToString() } setvalue=null", LogEventArgs.LogLevelEnum.Warning));
-                variable.SetValue = false;
+                return;
             }
             switch (variable.DataType)
             {
@@ -186,6 +206,12 @@ namespace SimplifiedCommBridge.Service
                     break;
                 case VarTypeEnum.Short:
                     _plc.Write(variable.Address, short.Parse(variable.SetValue.ToString()));
+                    break;
+                case VarTypeEnum.UShort:
+                    _plc.Write(variable.Address, ushort.Parse(variable.SetValue.ToString()));
+                    break;
+                case VarTypeEnum.UInt32:
+                    _plc.Write(variable.Address, UInt32.Parse(variable.SetValue.ToString()));
                     break;
                 case VarTypeEnum.Int32:
                     _plc.Write(variable.Address, variable.SetValue);
@@ -197,12 +223,28 @@ namespace SimplifiedCommBridge.Service
                     break;
             }
 
-           
-           
+            // 停止计时
+            stopwatch.Stop();
+            // 获取运行时间
+            TimeSpan elapsedTime = stopwatch.Elapsed;
+            // 输出运行时间
+            
+            LogEvent?.Invoke(this, new LogEventArgs($"写入地址-{variable.Address}完成，耗时-{elapsedTime.TotalMilliseconds}毫秒",
+            LogEventArgs.LogLevelEnum.Debug));
+            
+
+
+
+
         }
 
         public void WriteVariable(List<Variable> variables)
         {
+            // 创建Stopwatch实例
+            Stopwatch stopwatch = new Stopwatch();
+            // 开始计时
+            stopwatch.Start();
+
             //判断是否连接
             if (!IsConnected)
             {
@@ -231,6 +273,14 @@ namespace SimplifiedCommBridge.Service
                         item.VarType = VarType.Int;
                         item.Value = (Int16)data.SetValue;
                         break;
+                    case VarTypeEnum.UShort:
+                        item.VarType = VarType.Word;
+                        item.Value = (ushort)data.SetValue;
+                        break;
+                    case VarTypeEnum.UInt32:
+                        item.VarType = VarType.DWord;
+                        item.Value = (UInt32)data.SetValue;
+                        break;
                     case VarTypeEnum.Int32:
                         item.VarType = VarType.DInt;
                         item.Value = (Int32)data.SetValue;
@@ -245,7 +295,17 @@ namespace SimplifiedCommBridge.Service
             }    
 
             _plc.Write(datas.ToArray());
-            LogEvent?.Invoke(this, new LogEventArgs($"WriteVariables OK"));
+
+            // 停止计时
+            stopwatch.Stop();
+            // 获取运行时间
+            TimeSpan elapsedTime = stopwatch.Elapsed;
+            // 输出运行时间
+            if (variables.ToList().Count > 0)
+            {
+                LogEvent?.Invoke(this, new LogEventArgs($"{variables.ToList()[0].ProtocolName}批量写入完成，耗时-{elapsedTime.TotalMilliseconds}毫秒",
+                LogEventArgs.LogLevelEnum.Debug));
+            }
         }
 
       

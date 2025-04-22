@@ -23,17 +23,18 @@ namespace ConsoleApp1_TEST
                 v.PropertyChanged += Variable_PropertyChanged;
                 Console.WriteLine($"变量添加[{DateTime.Now}] {v.ToString()}");
             }
-            commService.StartPolling(100);
+
+            commService.StartPolling(3000);
 
             System.Threading.Thread.Sleep(1000);
 
-            ///测试写入功能
-            //commService.Variables[0].SetValue = (UInt32)6553100;
-            //commService.Variables[1].SetValue = (UInt32)6553201;
-            //commService.Variables[2].SetValue = (UInt32)6553302;
-            //commService.Variables[3].SetValue = (UInt32)6553403;
-            //commService.Variables[4].SetValue = (UInt32)6553504;
-            //commService.Write(new List<Variable>() { commService.Variables[0], commService.Variables[1], commService.Variables[2], commService.Variables[3]});
+            // 测试写入功能
+            commService.Variables[0].SetValue = (UInt32)6553100;
+            commService.Variables[1].SetValue = (UInt32)6553201;
+            commService.Variables[2].SetValue = (UInt32)6553302;
+            commService.Variables[3].SetValue = (UInt32)6553403;
+            commService.Variables[4].SetValue = (UInt32)6553504;
+            commService.Write(new List<Variable>() { commService.Variables[0], commService.Variables[1], commService.Variables[2], commService.Variables[3] });
             Console.ReadKey();
         }
 
@@ -46,6 +47,7 @@ namespace ConsoleApp1_TEST
         /// <param name="e"></param>
         static void Variable_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
+            
 
             var var = (Variable)sender;
             Console.WriteLine($"值变更[{DateTime.Now}] {var.ToString()}");
@@ -59,6 +61,10 @@ namespace ConsoleApp1_TEST
         /// <param name="logEventArgs"></param>
         static void CommService_LogEventHandler(object sender, LogEventArgs logEventArgs)
         {
+            //if (logEventArgs.LogLevel == LogEventArgs.LogLevelEnum.Debug)
+            //{
+            //    return;
+            //}
             Console.WriteLine(logEventArgs.ToString());
         }
         #region  MODbustcp测试
@@ -81,8 +87,8 @@ namespace ConsoleApp1_TEST
                 commService.Variables.Add(new Variable
                 {
                     Name = "MotorEn" + i,
-                    Address = "M" + i * 2,
-                    DataType = VarTypeEnum.Bool,
+                    Address = "D" + i * 2,
+                    DataType = VarTypeEnum.UInt32,
                     ProtocolName = "ModbusTCP",
 
                 });

@@ -28,10 +28,7 @@ namespace SimplifiedCommBridge.Service
 
         private void Protocol_LogEvent(object sender, LogEventArgs logEventArgs)
         {
-            if(logEventArgs.LogLevel==LogEventArgs.LogLevelEnum.Debug)
-            {
-                return;
-            }
+          
             LogEvent?.Invoke(sender, logEventArgs);
         }
 
@@ -153,14 +150,8 @@ namespace SimplifiedCommBridge.Service
                             if (Protocols.TryGetValue(group.Key, out var protocol))
                             {
                                 var stopwatch = new Stopwatch();
-                                stopwatch.Start();
-
                                 await Task.Run(() => { protocol.ReadVariables(group); });
-
-                                stopwatch.Stop();
                                 var elapsedMilliseconds = stopwatch.ElapsedMilliseconds;
-                                Protocol_LogEvent(this, new LogEventArgs($"协议 {group.Key} 的读取任务耗时: {elapsedMilliseconds} 毫秒", LogEventArgs.LogLevelEnum.Debug));
-
                             }
                         });
 
@@ -191,17 +182,13 @@ namespace SimplifiedCommBridge.Service
                 Protocol_LogEvent(this, new LogEventArgs(variable.ToString()+ "SetValue为null", LogEventArgs.LogLevelEnum.Error));
                 return;
             }
-            Protocol_LogEvent(this, new LogEventArgs($"执行写入-{variable.ToString()}"));
-
             // 根据协议类型选择对应的协议实例，执行变量写入操作。
             Protocols[variable.ProtocolName].WriteVariable(variable);
-
-            Protocol_LogEvent(this, new LogEventArgs($"执行写入完成-{variable.ToString()}"));
         }
 
         public void Write(List<Variable>  variable)
         {
-            Protocol_LogEvent(this, new LogEventArgs($"执行批量写入-{variable.ToString()}"));
+            
             // 按协议类型分组读取
             foreach (var group in variable.GroupBy(v => v.ProtocolName))
             {
@@ -210,7 +197,7 @@ namespace SimplifiedCommBridge.Service
                     protocol.WriteVariable(group.ToList());
                 }
             }
-            Protocol_LogEvent(this, new LogEventArgs($"执行批量写入完成-{variable.ToString()}"));
+           
 
         }
 
