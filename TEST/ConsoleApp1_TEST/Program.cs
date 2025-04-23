@@ -11,6 +11,7 @@ namespace ConsoleApp1_TEST
         static void Main(string[] args)
         {
 
+
             commService = new CommunicationService();
 
             commService.LogEvent += CommService_LogEventHandler;
