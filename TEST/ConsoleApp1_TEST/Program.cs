@@ -17,7 +17,6 @@ namespace ConsoleApp1_TEST
             commService.Protocols = new Dictionary<string, ICommunicationProtocol>();
             modbustcpTest();
 
-
             foreach (var v in commService.Variables)
             {
                 v.PropertyChanged += Variable_PropertyChanged;
